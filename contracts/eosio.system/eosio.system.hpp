@@ -231,6 +231,8 @@ namespace eosiosystem {
 
          // defined in voting.cpp
          void propagate_weight_change( const voter_info& voter );
+
+         void payramrental();
    };
 
 } /// eosiosystem

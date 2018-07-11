@@ -62,6 +62,9 @@ namespace eosiosystem {
             }
          }
       }
+      //pay ram rental every RENTAL_WINDOW
+      //in dev, each block simulate one RENTAL_WINDOW
+      payramrental();
    }
 
    using namespace eosio;

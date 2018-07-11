@@ -8,9 +8,78 @@
 
 #include "eosio_system_tester.hpp"
 
+#include <iostream>
+
 using namespace eosio_system;
 
 BOOST_AUTO_TEST_SUITE(eosio_system_tests)
+
+BOOST_FIXTURE_TEST_CASE(ramrental1Meos,eosio_system_tester,* boost::unit_test::tolerance(0.01 )) try{
+    cross_15_percent_threshold();
+    BOOST_REQUIRE_EQUAL( core_from_string("0.0000"), get_balance( "alice1111111" ) );
+
+    transfer( "eosio", "alice1111111", core_from_string("1000.0000"), "eosio" );
+    BOOST_REQUIRE_EQUAL( success(), stake( "eosio", "alice1111111", core_from_string("200.0000"), core_from_string("100.0000") ) );
+
+    auto total = get_total_stake( "alice1111111" );
+    auto init_bytes =  total["ram_bytes"].as_uint64();
+
+    auto init_balance = get_balance("alice1111111");
+    BOOST_REQUIRE_EQUAL(core_from_string("1000.0000"), init_balance);
+    BOOST_REQUIRE_EQUAL( success(),buyrambytes("alice1111111", "alice1111111",1024));
+    auto balance_after_1st_kb = get_balance("alice1111111");
+    auto price1 = init_balance - balance_after_1st_kb;
+
+//    produce_block( fc::hours(30*24) );
+
+       // each block simulate 3 days for this testcase
+    produce_blocks( 10 );
+
+
+    BOOST_REQUIRE_EQUAL( success(),buyrambytes("alice1111111", "alice1111111",1024));
+    auto balance_after_2nd_kb = get_balance("alice1111111");
+    auto price2 = balance_after_1st_kb - balance_after_2nd_kb;
+    std::cout<<price1<< " | " << price2 << " | " << double(price2.get_amount())/double(price1.get_amount()) << std::endl;
+
+    BOOST_TEST(price2 < price1);
+    BOOST_TEST(double(price2.get_amount())/double(price1.get_amount()) == 0.9);
+
+//    BOOST_TEST( get_balance(N(eosio.ramfee)) < initial_ramfee_balance + core_from_string("1.0000"));
+//    BOOST_REQUIRE_EQUAL( success(),buyrambytes("alice1111111", "alice1111111",1024));
+} FC_LOG_AND_RETHROW()
+
+ BOOST_FIXTURE_TEST_CASE(ramrental5Meos,eosio_system_tester) try{
+    cross_15_percent_threshold();
+    BOOST_REQUIRE_EQUAL( core_from_string("0.0000"), get_balance( "alice1111111" ) );
+
+    transfer( "eosio", "alice1111111", core_from_string("10000000.0000"), "eosio" );
+    BOOST_REQUIRE_EQUAL( success(), stake( "eosio", "alice1111111", core_from_string("200.0000"), core_from_string("100.0000") ) );
+
+    auto total = get_total_stake( "alice1111111" );
+    auto init_bytes =  total["ram_bytes"].as_uint64();
+
+    BOOST_REQUIRE_EQUAL( success(),buyram("alice1111111", "alice1111111",core_from_string("4000000.0000")));
+
+    auto init_balance = get_balance("alice1111111");
+    BOOST_REQUIRE_EQUAL( success(),buyrambytes("alice1111111", "alice1111111",1024));
+    auto balance_after_1st_kb = get_balance("alice1111111");
+    auto price1 = init_balance - balance_after_1st_kb;
+
+//    produce_block( fc::hours(30*24) );
+    //each block simulate 3 days for this testcase
+    produce_blocks( 10 );
+
+
+    BOOST_REQUIRE_EQUAL( success(),buyrambytes("alice1111111", "alice1111111",1024));
+    auto balance_after_2nd_kb = get_balance("alice1111111");
+    auto price2 = balance_after_1st_kb - balance_after_2nd_kb;
+    std::cout<<price1<< " | " << price2 << " | " << double(price2.get_amount())/double(price1.get_amount()) << std::endl;
+
+    BOOST_TEST(price2 < price1);
+
+//    BOOST_TEST( get_balance(N(eosio.ramfee)) < initial_ramfee_balance + core_from_string("1.0000"));
+//    BOOST_REQUIRE_EQUAL( success(),buyrambytes("alice1111111", "alice1111111",1024));
+ } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE( buysell, eosio_system_tester ) try {
 

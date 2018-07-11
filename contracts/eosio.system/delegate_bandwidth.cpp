@@ -193,13 +193,25 @@ namespace eosiosystem {
 
       auto fee = ( tokens_out.amount + 199 ) / 200; /// .5% fee (round up)
       // since tokens_out.amount was asserted to be at least 2 earlier, fee.amount < tokens_out.amount
-      
+
       if( fee > 0 ) {
          INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {account,N(active)},
             { account, N(eosio.ramfee), asset(fee), std::string("sell ram fee") } );
       }
    }
 
+   void system_contract::payramrental() {
+       //dev: hard code rental fee to make price drop 10% monthly
+       //root(0.9, 720) = 0.99985367665 (every hour)
+       const auto& market = _rammarket.get(S(4,RAMCORE), "ram market does not exist");
+       _rammarket.modify( market, 0, [&]( auto& es ) {
+//           bytes_out = es.convert( quant_after_fee,  S(0,RAM) ).amount;
+//           es.quote.balance.amount *= 0.99985367665;
+           es.quote.balance.amount = static_cast<int64_t>( 0.99 * double(es.quote.balance.amount));
+//           es.quote.balance.amount *= 0.9;
+       });
+   }
+   
    void validate_b1_vesting( int64_t stake ) {
       const int64_t base_time = 1527811200; /// 2018-06-01
       const int64_t max_claimable = 100'000'000'0000ll;
