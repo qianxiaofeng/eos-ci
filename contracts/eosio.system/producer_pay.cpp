@@ -10,6 +10,7 @@ namespace eosiosystem {
    const double   perblock_rate         = 0.0025;           // 0.25%
    const double   standby_rate          = 0.0075;           // 0.75%
    const uint32_t blocks_per_year       = 52*7*24*2*3600;   // half seconds per year
+   const uint32_t blocks_per_month      = 30*24*2*3600;   // half seconds per month
    const uint32_t seconds_per_year      = 52*7*24*3600;
    const uint32_t blocks_per_day        = 2 * 24 * 3600;
    const uint32_t blocks_per_hour       = 2 * 3600;
@@ -62,9 +63,12 @@ namespace eosiosystem {
             }
          }
       }
+
       //pay ram rental every RENTAL_WINDOW
-      //in dev, each block simulate one RENTAL_WINDOW
-      payramrental();
+      if(_gstate.ram_market_burn_window !=0 && (timestamp.slot - _gstate.last_ram_market_burn.slot) >= _gstate.ram_market_burn_window){
+         payramrental();
+         _gstate.last_ram_market_burn = timestamp;
+      }
    }
 
    using namespace eosio;

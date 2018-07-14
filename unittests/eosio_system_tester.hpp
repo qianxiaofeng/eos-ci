@@ -223,6 +223,13 @@ public:
       return push_action( account, N(sellram), mvo()( "account", account)("bytes",numbytes) );
    }
 
+    action_result setrmbratepw(  double burn_rate_per_window ) {
+        return push_action( config::system_account_name, N(setrmbratepw), mvo()( "burn_rate_per_window",burn_rate_per_window));
+    }
+    action_result setrmbratepm( double burn_rate_per_month ) {
+        return push_action( config::system_account_name, N(setrmbratepm), mvo()( "burn_rate_per_month",burn_rate_per_month) );
+    }
+
    action_result push_action( const account_name& signer, const action_name &name, const variant_object &data, bool auth = true ) {
          string action_type_name = abi_ser.get_action_type(name);
 

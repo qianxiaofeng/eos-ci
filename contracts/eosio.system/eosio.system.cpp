@@ -73,6 +73,28 @@ namespace eosiosystem {
       _global.set( _gstate, _self );
    }
 
+    void system_contract::setrmbratepw( double burn_rate_per_window ) {
+       require_auth( _self );
+
+       eosio_assert(burn_rate_per_window >= 0, "ram market rental burn rate per window is negative");
+       eosio_assert(burn_rate_per_window < 1, "ram market rental burn rate per window should be less than 100%");
+
+       _gstate.ram_market_burn_rate = burn_rate_per_window;
+       _global.set( _gstate, _self );
+    }
+
+    void system_contract::setrmbratepm( double burn_rate_per_month ) {
+       require_auth( _self );
+
+       eosio_assert(burn_rate_per_month >= 0, "ram market rental burn rate per month is negative");
+       eosio_assert(burn_rate_per_month < 1, "ram market rental burn rate per month should be less than 100%");
+       auto ram_market_burn_rate = _gstate.ram_market_burn_rate;
+       auto window_size = static_cast<uint64_t >(30*24*7200 * std::log(1 - ram_market_burn_rate) / std::log(1 - burn_rate_per_month));
+       eosio_assert(window_size >= 0 , "window size should be a positive number");
+       _gstate.ram_market_burn_window = window_size;
+       _global.set( _gstate, _self );
+    }
+
    void system_contract::setparams( const eosio::blockchain_parameters& params ) {
       require_auth( N(eosio) );
       (eosio::blockchain_parameters&)(_gstate) = params;
@@ -188,7 +210,7 @@ EOSIO_ABI( eosiosystem::system_contract,
      // native.hpp (newaccount definition is actually in eosio.system.cpp)
      (newaccount)(updateauth)(deleteauth)(linkauth)(unlinkauth)(canceldelay)(onerror)
      // eosio.system.cpp
-     (setram)(setparams)(setpriv)(rmvproducer)(bidname)
+     (setram)(setrmbratepw)(setrmbratepm)(setparams)(setpriv)(rmvproducer)(bidname)
      // delegate_bandwidth.cpp
      (buyrambytes)(buyram)(sellram)(delegatebw)(undelegatebw)(refund)
      // voting.cpp

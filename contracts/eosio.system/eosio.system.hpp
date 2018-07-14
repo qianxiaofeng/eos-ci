@@ -41,6 +41,9 @@ namespace eosiosystem {
       uint64_t             max_ram_size = 64ll*1024 * 1024 * 1024;
       uint64_t             total_ram_bytes_reserved = 0;
       int64_t              total_ram_stake = 0;
+      uint64_t             ram_market_burn_window = 0;
+      double               ram_market_burn_rate = 0;
+      block_timestamp      last_ram_market_burn;
 
       block_timestamp      last_producer_schedule_update;
       uint64_t             last_pervote_bucket_fill = 0;
@@ -54,11 +57,13 @@ namespace eosiosystem {
       block_timestamp      last_name_close;
 
       // explicit serialization macro is not necessary, used here only to improve compilation time
-      EOSLIB_SERIALIZE_DERIVED( eosio_global_state, eosio::blockchain_parameters,
-                                (max_ram_size)(total_ram_bytes_reserved)(total_ram_stake)
-                                (last_producer_schedule_update)(last_pervote_bucket_fill)
-                                (pervote_bucket)(perblock_bucket)(total_unpaid_blocks)(total_activated_stake)(thresh_activated_stake_time)
-                                (last_producer_schedule_size)(total_producer_vote_weight)(last_name_close) )
+       EOSLIB_SERIALIZE_DERIVED( eosio_global_state, eosio::blockchain_parameters,
+                                 (max_ram_size)(total_ram_bytes_reserved)(total_ram_stake)
+                                         (ram_market_burn_window)(ram_market_burn_rate)(last_ram_market_burn)
+                                         (last_producer_schedule_update)(last_pervote_bucket_fill)
+                                         (pervote_bucket)(perblock_bucket)(total_unpaid_blocks)(total_activated_stake)(thresh_activated_stake_time)
+                                         (last_producer_schedule_size)(total_producer_vote_weight)(last_name_close)
+                                )
    };
 
    struct producer_info {
@@ -200,6 +205,19 @@ namespace eosiosystem {
          void unregprod( const account_name producer );
 
          void setram( uint64_t max_ram_size );
+
+         /*
+          * set ram market burn rate per window
+          * */
+        void setrmbratepw( double burn_rate_per_window );
+
+
+       /*
+        * burn_rate_per_month is the rate how much price should drop monthly
+        * if target drop rate is 10% per month, burn_rate_per_month = 0.1
+        * then ram_rental_window = 30*24*7200 * log(1 - ram_market_burn_rate) / log(1 - burn_rate_per_month)
+        * */
+         void setrmbratepm(double burn_rate_per_month);
 
          void voteproducer( const account_name voter, const account_name proxy, const std::vector<account_name>& producers );
 

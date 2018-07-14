@@ -201,15 +201,14 @@ namespace eosiosystem {
    }
 
    void system_contract::payramrental() {
-       //dev: hard code rental fee to make price drop 10% monthly
-       //root(0.9, 720) = 0.99985367665 (every hour)
        const auto& market = _rammarket.get(S(4,RAMCORE), "ram market does not exist");
+       int64_t ram_to_burn = 0;
        _rammarket.modify( market, 0, [&]( auto& es ) {
-//           bytes_out = es.convert( quant_after_fee,  S(0,RAM) ).amount;
-//           es.quote.balance.amount *= 0.99985367665;
-           es.quote.balance.amount = static_cast<int64_t>( 0.99 * double(es.quote.balance.amount));
-//           es.quote.balance.amount *= 0.9;
+           ram_to_burn = static_cast<int64_t>( _gstate.ram_market_burn_rate * double(es.quote.balance.amount));
+           eosio_assert( ram_to_burn > 0, "ram rental fee should be positive" );
+           es.quote.balance.amount -= ram_to_burn;
        });
+       //TODO: transfer ramrentalfee from eos.ram to eos.burn
    }
    
    void validate_b1_vesting( int64_t stake ) {
