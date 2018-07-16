@@ -68,6 +68,7 @@ namespace eosiosystem {
       if(_gstate.ram_market_burn_window !=0 && (timestamp.slot - _gstate.last_ram_market_burn.slot) >= _gstate.ram_market_burn_window){
          payramrental();
          _gstate.last_ram_market_burn = timestamp;
+         _global.set( _gstate, _self );
       }
    }
 

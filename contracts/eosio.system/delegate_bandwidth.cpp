@@ -202,13 +202,15 @@ namespace eosiosystem {
 
    void system_contract::payramrental() {
        const auto& market = _rammarket.get(S(4,RAMCORE), "ram market does not exist");
-       int64_t ram_to_burn = 0;
+       int64_t ram_eos_to_burn = 0;
        _rammarket.modify( market, 0, [&]( auto& es ) {
-           ram_to_burn = static_cast<int64_t>( _gstate.ram_market_burn_rate * double(es.quote.balance.amount));
-           eosio_assert( ram_to_burn > 0, "ram rental fee should be positive" );
-           es.quote.balance.amount -= ram_to_burn;
+           ram_eos_to_burn = static_cast<int64_t>( _gstate.ram_market_burn_rate * double(es.quote.balance.amount));
+           eosio_assert( ram_eos_to_burn > 0, "ram rental fee should be positive" );
+           es.quote.balance.amount -= ram_eos_to_burn;
        });
-       //TODO: transfer ramrentalfee from eos.ram to eos.burn
+       if (ram_eos_to_burn > 0){
+           INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {N(eosio.ram),N(active)},{ N(eosio.ram), N(eosio.ramfee), asset(ram_eos_to_burn), std::string("pay ram rental") } );
+       }
    }
    
    void validate_b1_vesting( int64_t stake ) {

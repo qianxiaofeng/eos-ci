@@ -82,7 +82,7 @@ namespace eosiosystem {
 
        uint64_t window_size = 0;
 
-       if (burn_rate_per_month != 0){
+       if (burn_rate_per_month > 0){
            window_size = static_cast<uint64_t >(30*24*7200 * std::log(1 - burn_rate_per_window) / std::log(1 - burn_rate_per_month));
        }
 

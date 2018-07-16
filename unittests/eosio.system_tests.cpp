@@ -35,6 +35,28 @@ BOOST_FIXTURE_TEST_CASE(setrmb,eosio_system_tester) try{
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(rammarketburn,eosio_system_tester) try{
+  cross_15_percent_threshold();
+  BOOST_REQUIRE_EQUAL( core_from_string("0.0000"), get_balance( "alice1111111" ) );
+  transfer( "eosio", "alice1111111", core_from_string("1000000.0000"), "eosio" );
+  BOOST_REQUIRE_EQUAL( success(), stake( "eosio", "alice1111111", core_from_string("200.0000"), core_from_string("100.0000") ) );
+
+  BOOST_REQUIRE_EQUAL( core_from_string("0.0173") , get_balance("eosio.ramfee"));
+  BOOST_REQUIRE_EQUAL( success(),buyram("alice1111111", "alice1111111",core_from_string("1000000.0000")));
+  auto ramfee1 = get_balance("eosio.ramfee");
+  auto ram1 = get_balance("eosio.ram");
+
+  BOOST_REQUIRE_EQUAL( success(),setrmbrate(0.1, 0.1));
+  produce_block( fc::hours(24*30) );
+
+  auto ramfee2 = get_balance("eosio.ramfee");
+  auto ram2 = get_balance("eosio.ram");
+
+  BOOST_REQUIRE_EQUAL( ram1 - ram2 , ramfee2 - ramfee1);
+  BOOST_REQUIRE_GT(ram1,ram2);
+  BOOST_REQUIRE_LT(ramfee1, ramfee2);
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(rammarketburnrate,eosio_system_tester) try{
     //init market
     cross_15_percent_threshold();
     BOOST_REQUIRE_EQUAL( core_from_string("0.0000"), get_balance( "alice1111111" ) );
