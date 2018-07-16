@@ -297,15 +297,10 @@
         {"name":"max_ram_size",     "type":"uint64"}
       ]
     },{
-        "name": "setrmbratepw",
+        "name": "setrmbrate",
         "base": "",
         "fields": [
-          {"name":"burn_rate_per_window",     "type":"float64"}
-        ]
-    },{
-        "name": "setrmbratepm",
-        "base": "",
-        "fields": [
+          {"name":"burn_rate_per_window",     "type":"float64"},
           {"name":"burn_rate_per_month",     "type":"float64"}
         ]
     },{
@@ -469,14 +464,10 @@
       "type": "sellram",
       "ricardian_contract": ""
    },{
-       "name": "setrmbratepw",
-       "type": "setrmbratepw",
+       "name": "setrmbrate",
+       "type": "setrmbrate",
        "ricardian_contract": ""
     },{
-        "name": "setrmbratepm",
-        "type": "setrmbratepm",
-        "ricardian_contract": ""
-     },{
       "name": "delegatebw",
       "type": "delegatebw",
       "ricardian_contract": ""

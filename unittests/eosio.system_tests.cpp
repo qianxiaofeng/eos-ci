@@ -1,4 +1,5 @@
 #include <boost/test/unit_test.hpp>
+#include <boost/test/floating_point_comparison.hpp>
 #include <eosio/chain/contract_table_objects.hpp>
 #include <eosio/chain/global_property_object.hpp>
 #include <eosio/chain/resource_limits.hpp>
@@ -11,104 +12,113 @@
 #include <iostream>
 
 using namespace eosio_system;
+namespace utf = boost::unit_test;
+namespace fpc = boost::test_tools::fpc;
 
 BOOST_AUTO_TEST_SUITE(eosio_system_tests)
 
-BOOST_FIXTURE_TEST_CASE(setrmb,eosio_system_tester,* boost::unit_test::tolerance(0.0000000001 )) try{
+BOOST_FIXTURE_TEST_CASE(setrmb,eosio_system_tester) try{
     cross_15_percent_threshold();
     auto     initial_global_state      = get_global_state();
     auto ram_market_burn_window = initial_global_state["ram_market_burn_window"].as_uint64();
     auto ram_market_burn_rate = initial_global_state["ram_market_burn_rate"].as_double();
-    BOOST_TEST(ram_market_burn_window == 0);
-    BOOST_TEST(0 == ram_market_burn_rate);
+    BOOST_REQUIRE_EQUAL(0 , ram_market_burn_window);
+    BOOST_REQUIRE_EQUAL(0 , ram_market_burn_rate);
 
-    BOOST_REQUIRE_EQUAL( success(),setrmbratepw(0.01));
-    BOOST_REQUIRE_EQUAL( success(), setrmbratepm(0.1));
+    BOOST_REQUIRE_EQUAL( success(),setrmbrate(0.01, 0.1));
 
     initial_global_state      = get_global_state();
     ram_market_burn_window = initial_global_state["ram_market_burn_window"].as_uint64();
     ram_market_burn_rate = initial_global_state["ram_market_burn_rate"].as_double();
-    BOOST_TEST(ram_market_burn_window > 0);
-    BOOST_TEST(0.01 == ram_market_burn_rate);
+    BOOST_REQUIRE_GT(ram_market_burn_window , 0);
+    BOOST_REQUIRE_CLOSE(0.01 , ram_market_burn_rate, 0.000001);
 } FC_LOG_AND_RETHROW()
 
-BOOST_FIXTURE_TEST_CASE(ramrental1Meos,eosio_system_tester,* boost::unit_test::tolerance(0.01 )) try{
+BOOST_FIXTURE_TEST_CASE(rammarketburn,eosio_system_tester) try{
+    //init market
     cross_15_percent_threshold();
     BOOST_REQUIRE_EQUAL( core_from_string("0.0000"), get_balance( "alice1111111" ) );
-
-    transfer( "eosio", "alice1111111", core_from_string("1000.0000"), "eosio" );
+    transfer( "eosio", "alice1111111", core_from_string("10000.0000"), "eosio" );
+    transfer( "eosio", "bob111111111", core_from_string("10000000.0000"), "eosio" );
     BOOST_REQUIRE_EQUAL( success(), stake( "eosio", "alice1111111", core_from_string("200.0000"), core_from_string("100.0000") ) );
+    BOOST_REQUIRE_EQUAL( success(), stake( "eosio", "bob111111111", core_from_string("200.0000"), core_from_string("100.0000") ) );
 
 
-    BOOST_REQUIRE_EQUAL( success(),setrmbratepw(0.01));
-    BOOST_REQUIRE_EQUAL( success(), setrmbratepm(0.1));
+    auto prices = ram_market_price_change_one_month(0.01,0.1);
+    auto price1 = std::get<0>(prices);
+    auto price2 = std::get<1>(prices);
+    BOOST_REQUIRE_GT(price1,price2);
+    BOOST_REQUIRE_CLOSE(0.9 , double(price2.get_amount())/double(price1.get_amount()) , 1);
 
-    auto total = get_total_stake( "alice1111111" );
-    auto init_bytes =  total["ram_bytes"].as_uint64();
-    auto init_balance = get_balance("alice1111111");
-    BOOST_REQUIRE_EQUAL(core_from_string("1000.0000"), init_balance);
-    BOOST_REQUIRE_EQUAL( success(),buyrambytes("alice1111111", "alice1111111",1024));
-    auto balance_after_1st_kb = get_balance("alice1111111");
-    auto price1 = init_balance - balance_after_1st_kb;
+    prices = ram_market_price_change_one_month(0.001,0.05);
+    price1 = std::get<0>(prices);
+    price2 = std::get<1>(prices);
+    BOOST_REQUIRE_GT(price1,price2);
+    BOOST_REQUIRE_CLOSE(0.95 , double(price2.get_amount())/double(price1.get_amount()) , 1);
 
-    //after one month
-    const auto     initial_global_state      = get_global_state();
-    const auto ram_market_burn_window = initial_global_state["ram_market_burn_window"].as_uint64();
-    std::cout << ram_market_burn_window <<std::endl;
-    auto window_count = (30*24*7200 + ram_market_burn_window -1 ) / ram_market_burn_window;//round up
-    for(int i=0; i< window_count ;i++){
-        produce_block( fc::seconds(ram_market_burn_window/2 +1) );
-        produce_blocks(1);
-    }
+    prices = ram_market_price_change_one_month(0.001,0.01);
+    price1 = std::get<0>(prices);
+    price2 = std::get<1>(prices);
+    BOOST_REQUIRE_GT(price1,price2);
+    BOOST_REQUIRE_CLOSE(0.99 , double(price2.get_amount())/double(price1.get_amount()) , 1);
 
-    BOOST_REQUIRE_EQUAL( success(),buyrambytes("alice1111111", "alice1111111",1024));
-    auto balance_after_2nd_kb = get_balance("alice1111111");
-    auto price2 = balance_after_1st_kb - balance_after_2nd_kb;
-    std::cout<<price1<< " | " << price2 << " | " << double(price2.get_amount())/double(price1.get_amount()) << std::endl;
+    BOOST_REQUIRE_EQUAL( success(),buyram("bob111111111", "bob111111111",core_from_string("1000000.0000")));
 
-    BOOST_TEST(price2 < price1);
-    BOOST_TEST(double(price2.get_amount())/double(price1.get_amount()) == 0.9);
+    prices = ram_market_price_change_one_month(0.0,0.0);
+    price1 = std::get<0>(prices);
+    price2 = std::get<1>(prices);
+    BOOST_REQUIRE_EQUAL(price1,price2);
+    BOOST_REQUIRE_CLOSE(1 , double(price2.get_amount())/double(price1.get_amount()) , 1);
+
+    prices = ram_market_price_change_one_month(0.01,0.1);
+    price1 = std::get<0>(prices);
+    price2 = std::get<1>(prices);
+    BOOST_REQUIRE_GT(price1,price2);
+    BOOST_REQUIRE_CLOSE(0.9 , double(price2.get_amount())/double(price1.get_amount()) , 1);
+
+    BOOST_REQUIRE_EQUAL( success(),buyram("bob111111111", "bob111111111",core_from_string("4000000.0000")));
+
+    prices = ram_market_price_change_one_month(0.01,0.2);
+    price1 = std::get<0>(prices);
+    price2 = std::get<1>(prices);
+    BOOST_REQUIRE_GT(price1,price2);
+    BOOST_REQUIRE_CLOSE(0.8 , double(price2.get_amount())/double(price1.get_amount()) , 1);
+
+    prices = ram_market_price_change_one_month(0.01,0.3);
+    price1 = std::get<0>(prices);
+    price2 = std::get<1>(prices);
+    BOOST_REQUIRE_GT(price1,price2);
+    BOOST_REQUIRE_CLOSE(0.7 , double(price2.get_amount())/double(price1.get_amount()) , 1);
+
+    prices = ram_market_price_change_one_month(0.01,0.01);
+    price1 = std::get<0>(prices);
+    price2 = std::get<1>(prices);
+    BOOST_REQUIRE_GT(price1,price2);
+    BOOST_REQUIRE_CLOSE(0.99 , double(price2.get_amount())/double(price1.get_amount()) , 1);
+
+    BOOST_REQUIRE_EQUAL( success(),buyram("bob111111111", "bob111111111",core_from_string("2000000.0000")));
+
+    prices = ram_market_price_change_one_month(0.01,0.8);
+    price1 = std::get<0>(prices);
+    price2 = std::get<1>(prices);
+    BOOST_REQUIRE_GT(price1,price2);
+    BOOST_REQUIRE_CLOSE(0.2 , double(price2.get_amount())/double(price1.get_amount()) , 1);
+
+
+    prices = ram_market_price_change_one_month(0.01,0.05);
+    price1 = std::get<0>(prices);
+    price2 = std::get<1>(prices);
+    BOOST_REQUIRE_GT(price1,price2);
+    BOOST_REQUIRE_CLOSE(0.95 , double(price2.get_amount())/double(price1.get_amount()) , 1);
+
+    prices = ram_market_price_change_one_month(0.01,0.01);
+    price1 = std::get<0>(prices);
+    price2 = std::get<1>(prices);
+    BOOST_REQUIRE_GT(price1,price2);
+    BOOST_REQUIRE_CLOSE(0.99 , double(price2.get_amount())/double(price1.get_amount()) , 1);
+
 
 } FC_LOG_AND_RETHROW()
-
- BOOST_FIXTURE_TEST_CASE(ramrental5Meos,eosio_system_tester,* boost::unit_test::tolerance(0.01 )) try{
-    cross_15_percent_threshold();
-    BOOST_REQUIRE_EQUAL( core_from_string("0.0000"), get_balance( "alice1111111" ) );
-
-    transfer( "eosio", "alice1111111", core_from_string("10000000.0000"), "eosio" );
-    BOOST_REQUIRE_EQUAL( success(), stake( "eosio", "alice1111111", core_from_string("200.0000"), core_from_string("100.0000") ) );
-
-    auto total = get_total_stake( "alice1111111" );
-    auto init_bytes =  total["ram_bytes"].as_uint64();
-
-    BOOST_REQUIRE_EQUAL( success(),buyram("alice1111111", "alice1111111",core_from_string("4000000.0000")));
-
-    BOOST_REQUIRE_EQUAL( success(),setrmbratepw(0.01));
-    BOOST_REQUIRE_EQUAL( success(), setrmbratepm(0.1));
-
-    auto init_balance = get_balance("alice1111111");
-    BOOST_REQUIRE_EQUAL( success(),buyrambytes("alice1111111", "alice1111111",1024));
-    auto balance_after_1st_kb = get_balance("alice1111111");
-    auto price1 = init_balance - balance_after_1st_kb;
-
-    //after one month
-    const auto     initial_global_state      = get_global_state();
-    const auto ram_market_burn_window = initial_global_state["ram_market_burn_window"].as_uint64();
-    auto window_count = (30*24*7200 + ram_market_burn_window -1 ) / ram_market_burn_window;
-    for(int i=0; i< window_count ;i++){
-        produce_block( fc::seconds(ram_market_burn_window/2 +1) );
-        produce_blocks(1);
-    }
-
-    BOOST_REQUIRE_EQUAL( success(),buyrambytes("alice1111111", "alice1111111",1024));
-    auto balance_after_2nd_kb = get_balance("alice1111111");
-    auto price2 = balance_after_1st_kb - balance_after_2nd_kb;
-    //std::cout<<price1<< " | " << price2 << " | " << double(price2.get_amount())/double(price1.get_amount()) << std::endl;
-
-    BOOST_TEST(price2 < price1);
-    BOOST_TEST(double(price2.get_amount())/double(price1.get_amount()) == 0.9);
-
- } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE( buysell, eosio_system_tester ) try {
 

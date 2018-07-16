@@ -223,12 +223,9 @@ public:
       return push_action( account, N(sellram), mvo()( "account", account)("bytes",numbytes) );
    }
 
-    action_result setrmbratepw(  double burn_rate_per_window ) {
-        return push_action( config::system_account_name, N(setrmbratepw), mvo()( "burn_rate_per_window",burn_rate_per_window));
-    }
-    action_result setrmbratepm( double burn_rate_per_month ) {
-        return push_action( config::system_account_name, N(setrmbratepm), mvo()( "burn_rate_per_month",burn_rate_per_month) );
-    }
+   action_result setrmbrate(  double burn_rate_per_window, double burn_rate_per_month) {
+       return push_action( config::system_account_name, N(setrmbrate), mvo()( "burn_rate_per_window",burn_rate_per_window)("burn_rate_per_month",burn_rate_per_month));
+   }
 
    action_result push_action( const account_name& signer, const action_name &name, const variant_object &data, bool auth = true ) {
          string action_type_name = abi_ser.get_action_type(name);
@@ -502,6 +499,40 @@ public:
       BOOST_REQUIRE_EQUAL( name("defproducera"), producer_keys[0].producer_name );
 
       return producer_names;
+   }
+
+    std::tuple<eosio::chain::asset,eosio::chain::asset> ram_market_price_change_one_month(double burn_rate_per_window, double burn_rate_per_month){
+      //set ram market burn rate
+      BOOST_REQUIRE_EQUAL( success(),setrmbrate(burn_rate_per_window, burn_rate_per_month));
+
+      auto balance_before_buy = get_balance("alice1111111");
+      BOOST_REQUIRE_EQUAL( success(),buyrambytes("alice1111111", "alice1111111",1024));
+      auto balance_after_buy = get_balance("alice1111111");
+      auto price1 = balance_before_buy - balance_after_buy;
+
+      //fastforward one month
+      const auto     initial_global_state      = get_global_state();
+      const auto ram_market_burn_window = initial_global_state["ram_market_burn_window"].as_uint64();
+
+      if (ram_market_burn_window == 0) {
+         for(int i=0; i < 30*24/8 ; i ++){
+            produce_block( fc::hours(8) );
+         }
+      }else{
+         auto window_count = (30*24*7200 + ram_market_burn_window -1 ) / ram_market_burn_window;//round up
+         for(int i=0; i< window_count ;i++){
+            produce_block( fc::seconds(ram_market_burn_window/2 +1) );
+            produce_blocks(1);
+         }
+      }
+
+      balance_before_buy = get_balance("alice1111111");
+      BOOST_REQUIRE_EQUAL( success(),buyrambytes("alice1111111", "alice1111111",1024));
+      balance_after_buy = get_balance("alice1111111");
+      auto price2 = balance_before_buy - balance_after_buy;
+      std::cout<<price1<< " | " << price2 << " | " << double(price2.get_amount())/double(price1.get_amount()) << std::endl;
+
+      return std::make_tuple(price1, price2);
    }
 
    void cross_15_percent_threshold() {

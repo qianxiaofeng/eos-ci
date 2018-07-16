@@ -207,17 +207,14 @@ namespace eosiosystem {
          void setram( uint64_t max_ram_size );
 
          /*
-          * set ram market burn rate per window
+          * set ram market burn rate
+          * burn_rate_per_window: percentage of ram eos to burn every ram_market_burn_window, recommend 0.01
+          * burn_rate_per_month: ram price drop rate per month
+          * ram_market_burn_window is calculated from burn_rate_per_window and burn_rate_per_month
+          * ram_market_burn_window = 30*24*7200 * log(1 - burn_rate_per_window) / log(1 - burn_rate_per_month)
           * */
-        void setrmbratepw( double burn_rate_per_window );
 
-
-       /*
-        * burn_rate_per_month is the rate how much price should drop monthly
-        * if target drop rate is 10% per month, burn_rate_per_month = 0.1
-        * then ram_rental_window = 30*24*7200 * log(1 - ram_market_burn_rate) / log(1 - burn_rate_per_month)
-        * */
-         void setrmbratepm(double burn_rate_per_month);
+         void setrmbrate(const double burn_rate_per_window, const double burn_rate_per_month);
 
          void voteproducer( const account_name voter, const account_name proxy, const std::vector<account_name>& producers );
 
